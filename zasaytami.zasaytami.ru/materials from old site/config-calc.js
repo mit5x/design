@@ -19,7 +19,8 @@ const CALC_CONFIG = {
 
   meta: {
     currency: '₽',
-    baseDays: 5,                    // срок для одностраничного сайта
+    // Базовый срок задаётся в группе 'base' (5 дней landing / 6 дней multipage),
+    // надбавки прочих опций прибавляются сверху.
     daysWord: ['день', 'дня', 'дней'],
     submitEmail: 'mail@zasaytami.ru',
     // TODO: заказчик просил по умолчанию +1 день на каждую платную опцию.
@@ -58,10 +59,9 @@ const CALC_CONFIG = {
    * Определение типа сайта. Проверяется сверху вниз, первое совпадение выигрывает.
    */
   siteTypeRules: [
-    { type: 'shop',      requires: 'shop' },
-    { type: 'catalog',   requires: 'catalog' },
-    { type: 'multipage', requires: 'multipage' },
-    { type: 'landing',   requires: null }      // fallback
+    { type: 'shop',    requires: 'shop' },       // чекбокс «Интернет-магазин»
+    { type: 'catalog', requires: 'catalog' },    // чекбокс «Каталог товаров»
+    { type: 'radio',   requires: 'base' }        // иначе — значение радио «Тип сайта»
   ],
 
   /* ------------------------------------------------------------------ */
@@ -72,28 +72,30 @@ const CALC_CONFIG = {
 
     {
       id: 'base',
+      type: 'radio',            // ВЗАИМОИСКЛЮЧАЮЩИЙ выбор, не чекбоксы
       title: 'Тип сайта',
+      required: true,
+      default: 'landing',
+      /**
+       * Цены абсолютные, не надбавки: выбран ровно один вариант.
+       * days здесь — базовый срок целиком, надбавки прочих опций считаются сверху.
+       */
       items: [
         {
           id: 'landing',
-          type: 'checkbox',
           title: 'Одностраничный сайт',
           note: 'Для продвижения одной конкретной услуги. Например: кузовной ремонт.',
           price: 38000,
-          days: 0,                 // база, 5 дней задаётся в meta.baseDays
-          checked: true,
-          disabled: true,          // всегда выбран, отказаться нельзя
-          locked: true
+          days: 5
         },
         {
           id: 'multipage',
-          type: 'checkbox',
           title: 'Многостраничный сайт',
           note: 'Для корпоративного сайта или продвижения нескольких смежных услуг. ' +
                 'Например: кузовной ремонт, ремонт бамперов, локальная покраска, ' +
                 'переварка порогов, восстановление порогов.',
-          price: 12000,
-          days: 1                  // TODO: реалистичнее +3
+          price: 50000,
+          days: 6                  // TODO: скорректировать
         }
       ]
     },
@@ -101,7 +103,7 @@ const CALC_CONFIG = {
     {
       id: 'sections',
       title: 'Дополнительные разделы многостраничного сайта',
-      requires: ['multipage'],     // группа скрыта/заблокирована без многостраничного
+      requiresRadio: { group: 'base', value: 'multipage' },  // только для многостраничного
       disabledHint: 'Доступно при выборе многостраничного сайта',
       items: [
         { id: 'sec_news',      type: 'checkbox', title: 'Новости',    price: 3000, days: 1 },
@@ -123,8 +125,9 @@ const CALC_CONFIG = {
           note: 'Товары, категории, картинки, описания, фильтрация товаров, сортировка.',
           price: 45000,
           days: 1,                 // TODO: реалистичнее +5
-          // Каталог — это раздел многостраничного сайта:
-          autoEnables: ['multipage']
+          // Каталог возможен только на многостраничном сайте:
+          // включение переключает радио «Тип сайта» на multipage
+          setsRadio: { group: 'base', value: 'multipage' }
         },
         {
           id: 'shop',
@@ -134,7 +137,8 @@ const CALC_CONFIG = {
           price: 50000,
           days: 1,                 // TODO: реалистичнее +5
           // Магазин без каталога невозможен:
-          autoEnables: ['catalog', 'multipage']
+          autoEnables: ['catalog'],
+          setsRadio: { group: 'base', value: 'multipage' }
         }
       ]
     },
